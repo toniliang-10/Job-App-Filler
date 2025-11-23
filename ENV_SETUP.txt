@@ -1,0 +1,36 @@
+====================================
+  .env File Setup Instructions
+====================================
+
+Create a file named ".env" (exactly, with the dot at the beginning) in the project root directory.
+
+The .env file should contain:
+
+GEMINI_API_KEY=your_actual_api_key_here
+
+
+Replace "your_actual_api_key_here" with your actual Google Gemini API key.
+
+To get your API key:
+1. Go to: https://makersuite.google.com/app/apikey
+2. Click "Create API Key"
+3. Copy the key
+4. Paste it in the .env file after GEMINI_API_KEY=
+
+
+IMPORTANT NOTES:
+- No spaces around the = sign
+- No quotes around the key
+- The file must be named exactly ".env"
+- Keep this file private and never commit it to git
+
+
+Example of correct .env file content:
+----------------------------------------
+GEMINI_API_KEY=AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxx
+----------------------------------------
+
+
+To verify your setup:
+python main.py test-llm
+
