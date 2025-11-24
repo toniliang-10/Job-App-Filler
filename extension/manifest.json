@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Job App Auto-Filler",
+  "description": "Autofill job applications with resume data, previous answers, and Gemini drafts.",
+  "version": "0.1.0",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Job App Auto-Filler",
+    "default_popup": "popup.html"
+  }
+}

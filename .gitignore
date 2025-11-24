@@ -13,6 +13,7 @@ __pycache__/
 # Data
 data/qa_history.json
 data/chroma_db/
+backend/data/
 
 # IDE
 .vscode/

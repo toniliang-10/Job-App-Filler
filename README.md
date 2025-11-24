@@ -1,222 +1,49 @@
-# Job Application Filler
+# Job Application Auto-Filler
 
-Smart Chrome extension that auto-fills job applications using your resume, answer history, and AI.
+Chrome extension + FastAPI backend that reuses resume data and past answers to autofill job applications, while drafting open-ended responses with Gemini.
 
-## 🎯 How It Works
+## Backend (FastAPI)
 
-### For Different Question Types:
-
-1. **Resume Data** (name, email, phone)
-   - ✅ Auto-filled immediately from your resume
-
-2. **Closed-Ended** (yes/no, dropdowns, checkboxes)
-   - 🔍 First time: You fill manually
-   - 💾 Extension saves your answer
-   - ✨ Next time: Auto-filled from history
-
-3. **Open-Ended** ("Why do you want to work here?")
-   - 🤖 AI generates draft answer using Gemini
-   - 👀 You review and edit before submitting
-
-## 🚀 Quick Setup
-
-### 1. Install Dependencies
+Requirements: Python 3.10+  
+Setup:
 
 ```bash
+cd backend
+python -m venv .venv
+. .venv/Scripts/activate   # Windows PowerShell
 pip install -r requirements.txt
 ```
 
-### 2. Add Your API Key
-
-Create `.env` file:
-```
-GEMINI_API_KEY=your_actual_key_here
-```
-
-Get key from: https://makersuite.google.com/app/apikey
-
-### 3. Add Your Resume
-
-Place your resume PDF in:
-```
-data/documents/RESUME TONI LIANG.pdf
-```
-
-### 4. Start Backend
+Populate `.env` (already provided) with `GEMINI_API_KEY`. Start the server:
 
 ```bash
-python backend.py
+uvicorn backend.main:app --reload
 ```
 
-Leave this running!
+Resume input options:
+- Upload ad hoc (preferred): `curl -F "file=@C:\path\to\resume.pdf" http://127.0.0.1:8000/parse-resume`
+- Repo copy (your request): drop a PDF or text file at `backend/data/resume.pdf` (or set `LOCAL_RESUME_PATH` to another path) and run: `curl -X POST http://127.0.0.1:8000/parse-resume-local`
+- Verify cache: `curl http://127.0.0.1:8000/resume`
 
-### 5. Load Chrome Extension
+Endpoints:
+- `GET /health` – service check.
+- `POST /parse-resume` – `multipart/form-data` with `file` (PDF or text). Caches parsed resume to `backend/data/resume_cache.json`.
+- `POST /parse-resume-local` – reads local file from `LOCAL_RESUME_PATH` (default `backend/data/resume.pdf`) and caches it.
+- `GET /resume` – returns cached resume data.
+- `POST /closed-question` – body `{ question, answer?, choices? }`. If `answer` omitted, returns cached answer; if present, stores it.
+- `POST /open-question` – body `{ question, job_context?, resume_summary? }`, returns Gemini draft (fallback if Gemini unavailable).
+- `GET /qa-history` – returns stored closed-question answers.
+- Config: set `GEMINI_MODEL` to control the model (default `gemini-1.5-flash`). If a model fails, the server falls back to the default. Use supported names such as `gemini-1.5-flash` or `gemini-1.5-pro`.
 
-1. Open Chrome: `chrome://extensions`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select `chrome-extension` folder
+Data is stored locally under `backend/data/`.
 
-### 6. Test It!
+## Chrome Extension
 
-1. Open `test-job-application.html` in Chrome
-2. Click the extension icon
-3. Click "Detect Fields"
-4. Click "Auto-Fill Known Fields"
-5. Watch the magic! ✨
+1. Build/ensure backend is running (default `http://localhost:8000`).
+2. In Chrome, open `chrome://extensions`, enable Developer Mode, and **Load unpacked** pointing to the `extension` folder.
+3. Open the options page to set your backend URL and toggle AI drafting.
+4. Visit a job application form (try `test-job-application.html`), click the floating **Auto-Fill** button. Closed questions are reused; new selections are remembered after you choose them. Open-ended fields get a Gemini draft when enabled.
 
-## 📖 Usage Workflow
+## Test page
 
-### First Application on a Site:
-
-1. **Click "Detect Fields"**
-   - Extension scans the page
-   - Shows: X from resume, Y known, Z need input, W AI drafts
-
-2. **Click "Auto-Fill Known Fields"**
-   - Name, email, phone filled from resume
-   - Any previously answered questions filled from history
-   - AI drafts inserted for essay questions
-
-3. **Fill Unknown Fields Manually**
-   - Extension highlights questions it hasn't seen before
-   - You answer them normally
-
-4. **Click "Save My Answers"**
-   - Extension saves your new answers
-   - Next application will auto-fill these!
-
-### Second Application (Same Questions):
-
-1. **Click "Detect Fields"**
-2. **Click "Auto-Fill Known Fields"**
-3. **Done!** All fields filled automatically
-
-## 🎓 Smart Features
-
-### Resume Data Auto-Fill
-- Name, email, phone extracted once
-- Always auto-filled
-- No manual work
-
-### Answer History Learning
-- Closed questions saved after first answer
-- "Are you authorized to work in the US?" → Saved forever
-- "Years of experience" → Saved and reused
-- Builds over time automatically
-
-### AI-Powered Drafts
-- "Why this company?" → AI generates personalized answer
-- "Describe a challenge" → AI pulls from your resume
-- You always review and can edit
-- Based on your actual experience
-
-## 🔧 API Endpoints
-
-The backend provides:
-
-- `GET /api/parse-resume` - Returns your name, email, phone
-- `POST /api/closed-question` - Check/save closed answers
-- `POST /api/open-question` - Generate AI drafts with Gemini
-- `GET /api/history` - View all saved answers
-- `POST /api/clear-history` - Clear answer history
-
-## 📁 Project Structure
-
-```
-Job-App-Filler/
-├── backend.py              # Simple Flask server
-├── requirements.txt        # Just 5 dependencies!
-├── .env                    # Your Gemini API key
-├── data/
-│   ├── documents/          # Your resume (PDF)
-│   └── qa_history.json     # Saved answers
-├── chrome-extension/
-│   ├── manifest.json
-│   ├── content.js          # Field detection & filling
-│   ├── background.js       # API communication
-│   ├── popup.html/css/js   # Extension UI
-│   └── icons/
-└── test-job-application.html  # Test page
-
-```
-
-## 💡 Pro Tips
-
-1. **Build History Gradually**
-   - First few applications: more manual work
-   - After 5-10 applications: mostly auto-filled
-   - Common questions saved forever
-
-2. **Review AI Drafts**
-   - AI is good but not perfect
-   - Always read generated answers
-   - Edit to match your voice
-
-3. **Keep Resume Updated**
-   - Better resume = better AI answers
-   - Update PDF, restart backend
-
-4. **Clear History When Needed**
-   - Changed your answer strategy?
-   - Click "Clear History" in extension
-   - Start fresh
-
-## 🐛 Troubleshooting
-
-**"Server Offline"**
-→ Run `python backend.py` in terminal
-
-**Wrong name/email**
-→ Check resume PDF is correct
-→ Restart backend
-
-**AI answers are generic**
-→ Make sure resume has detailed info
-→ More detail = better answers
-
-**Some fields not filling**
-→ Some sites use complex forms
-→ May need manual filling
-
-## 🔒 Privacy & Security
-
-- ✅ Resume stays local (only parsed once)
-- ✅ History stored locally in JSON
-- ✅ Only question + resume sent to Gemini API
-- ✅ No cloud storage, no tracking
-- ✅ You control everything
-
-## 📊 What Gets Saved?
-
-**Saved to History:**
-- Closed-ended questions and your answers
-- Example: "Work authorization" → "Yes"
-
-**NOT Saved:**
-- Open-ended answers (generated fresh each time)
-- Resume data (parsed from PDF each time)
-- Any personal identifying info
-
-## ⚡ Performance
-
-- **Resume parsing**: 1 second (on startup)
-- **Field detection**: <1 second
-- **History lookup**: Instant
-- **AI generation**: 2-5 seconds per question
-- **Full form**: Usually <30 seconds total
-
-## 🎉 You're Ready!
-
-1. `python backend.py` → Start server
-2. Load extension → One time setup
-3. Open job application → Any site
-4. Click extension → Detect & fill
-5. Submit application → Manual review & submit
-
-**The more you use it, the smarter it gets!** 🚀
-
----
-
-Built with: Flask, Google Gemini, Chrome Extensions, PyPDF2
-
+Open `test-job-application.html` in the browser to sanity-check autofill behavior.
