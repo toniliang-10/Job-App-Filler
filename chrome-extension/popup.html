@@ -10,62 +10,86 @@
   <div class="container">
     <div class="header">
       <h1>🚀 Job App Filler</h1>
-      <p class="subtitle">AI-powered form assistant</p>
+      <p class="subtitle">Smart auto-fill assistant</p>
     </div>
 
+    <!-- Server Status -->
     <div class="status-section">
       <div id="server-status" class="status-indicator">
         <span class="dot"></span>
         <span class="status-text">Checking server...</span>
       </div>
-    </div>
-
-    <div class="stats-section" id="stats-section" style="display: none;">
-      <div class="stat-item">
-        <span class="stat-label">Documents:</span>
-        <span id="doc-count" class="stat-value">-</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Answers:</span>
-        <span id="answer-count" class="stat-value">-</span>
+      <div id="history-count" class="stat-small" style="display:none;">
+        <span id="history-number">0</span> saved answers
       </div>
     </div>
 
-    <div class="actions">
-      <button id="detect-fields-btn" class="btn btn-primary" disabled>
-        🔍 Detect Form Fields
+    <!-- Main Action Button -->
+    <div class="actions" id="main-actions">
+      <button id="fill-btn" class="btn btn-primary" disabled>
+        ✨ Fill Application
       </button>
+      <p class="hint">Detects fields and fills automatically</p>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results-section" style="display:none;">
+      <div class="summary-box">
+        <h3>✅ Filled Fields</h3>
+        <div class="summary-stats">
+          <div class="stat">
+            <span class="stat-num" id="filled-count">0</span>
+            <span class="stat-label">Auto-Filled</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num" id="unknown-count">0</span>
+            <span class="stat-label">Need Input</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Always Visible Save Button -->
+      <div id="save-section" class="save-section">
+        <div class="save-banner">
+          💡 <strong>Filled fields manually?</strong> Save them for next time!
+        </div>
+        <button id="save-manual-btn" class="btn btn-success btn-large">
+          💾 Save My Answers
+        </button>
+        <p class="hint-center">Saves all filled fields to your history</p>
+      </div>
+
+      <!-- Unknown Questions List (Optional) -->
+      <div id="manual-section" style="display:none;">
+        <details class="collapsible">
+          <summary class="collapsible-header">
+            📋 Fields that need input (<span id="manual-count">0</span>)
+          </summary>
+          <ul id="manual-list" class="field-list"></ul>
+        </details>
+      </div>
+
+      <div class="success-banner" id="success-banner" style="display:none;">
+        🎉 All done! Review the form and submit when ready.
+      </div>
       
-      <button id="fill-interactive-btn" class="btn btn-primary" disabled>
-        ✍️ Fill (Interactive)
-      </button>
-      
-      <button id="fill-auto-btn" class="btn btn-secondary" disabled>
-        ⚡ Fill (Auto)
-      </button>
-      
-      <button id="suggest-only-btn" class="btn btn-secondary" disabled>
-        💡 Suggest Only
+      <button id="new-form-btn" class="btn btn-secondary" style="display:none; margin-top:10px;">
+        🔄 Fill Another Form
       </button>
     </div>
 
-    <div id="results-section" style="display: none;">
-      <h3>Detected Fields: <span id="field-count">0</span></h3>
-      <div id="fields-list"></div>
-    </div>
-
-    <div class="footer">
-      <button id="view-history-btn" class="btn-link">📊 View History</button>
-      <button id="settings-btn" class="btn-link">⚙️ Settings</button>
-    </div>
-
-    <div id="loading" class="loading" style="display: none;">
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading" style="display:none;">
       <div class="spinner"></div>
-      <p>Processing...</p>
+      <p id="loading-text">Processing...</p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <button id="clear-history-btn" class="btn-link">🗑️ Clear History</button>
     </div>
   </div>
 
   <script src="popup.js"></script>
 </body>
 </html>
-

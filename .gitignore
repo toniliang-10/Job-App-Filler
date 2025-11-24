@@ -11,9 +11,8 @@ __pycache__/
 .Python
 
 # Data
+data/qa_history.json
 data/chroma_db/
-data/documents/
-data/answer_history.json
 
 # IDE
 .vscode/
@@ -24,7 +23,3 @@ data/answer_history.json
 
 # Logs
 *.log
-
-# Playwright
-.playwright/
-

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Job Application - Software Engineer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .form-section {
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .required {
+            color: #dc3545;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        input[type="date"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option,
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .submit-section {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 TechCorp Inc.</h1>
+            <p>Software Engineer Position</p>
+        </div>
+
+        <div class="form-section">
+            <div class="info-box">
+                <p><strong>📝 Test Application Form</strong><br>
+                This is a test page to demo the Job Application Filler extension. Fill out this form using the extension!</p>
+            </div>
+
+            <form id="jobApplicationForm">
+                <!-- Personal Information -->
+                <div class="section-title">Personal Information</div>
+                
+                <div class="form-group">
+                    <label for="fullName">Full Name <span class="required">*</span></label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number <span class="required">*</span></label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Current Location</label>
+                    <input type="text" id="location" name="location" placeholder="City, State">
+                </div>
+
+                <!-- Professional Background -->
+                <div class="section-title">Professional Background</div>
+
+                <div class="form-group">
+                    <label for="experience">Years of Professional Experience <span class="required">*</span></label>
+                    <select id="experience" name="experience" required>
+                        <option value="">Select...</option>
+                        <option value="0-1">0-1 years</option>
+                        <option value="1-3">1-3 years</option>
+                        <option value="3-5">3-5 years</option>
+                        <option value="5-10">5-10 years</option>
+                        <option value="10+">10+ years</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="education">Highest Level of Education <span class="required">*</span></label>
+                    <select id="education" name="education" required>
+                        <option value="">Select...</option>
+                        <option value="high-school">High School</option>
+                        <option value="bachelors">Bachelor's Degree</option>
+                        <option value="masters">Master's Degree</option>
+                        <option value="phd">PhD</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="university">University/College</label>
+                    <input type="text" id="university" name="university" placeholder="Name of institution">
+                </div>
+
+                <div class="form-group">
+                    <label for="currentCompany">Current/Most Recent Company</label>
+                    <input type="text" id="currentCompany" name="currentCompany">
+                </div>
+
+                <div class="form-group">
+                    <label for="currentRole">Current/Most Recent Role</label>
+                    <input type="text" id="currentRole" name="currentRole">
+                </div>
+
+                <!-- Technical Skills -->
+                <div class="section-title">Technical Skills</div>
+
+                <div class="form-group">
+                    <label for="programmingLanguages">Programming Languages (comma-separated)</label>
+                    <input type="text" id="programmingLanguages" name="programmingLanguages" 
+                           placeholder="e.g., Python, JavaScript, Java">
+                    <div class="field-hint">List your programming language skills</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="frameworks">Frameworks & Technologies</label>
+                    <input type="text" id="frameworks" name="frameworks" 
+                           placeholder="e.g., React, Django, Node.js">
+                </div>
+
+                <div class="form-group">
+                    <label for="databases">Database Experience</label>
+                    <input type="text" id="databases" name="databases" 
+                           placeholder="e.g., PostgreSQL, MongoDB, Redis">
+                </div>
+
+                <!-- Questions -->
+                <div class="section-title">Application Questions</div>
+
+                <div class="form-group">
+                    <label for="whyCompany">Why do you want to work at TechCorp? <span class="required">*</span></label>
+                    <textarea id="whyCompany" name="whyCompany" required></textarea>
+                    <div class="field-hint">Please provide a detailed answer (200-500 words)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="experience-description">Describe your most significant technical achievement</label>
+                    <textarea id="experience-description" name="experience-description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="strengths">What are your key strengths as a software engineer?</label>
+                    <textarea id="strengths" name="strengths"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectExample">Describe a challenging project you worked on</label>
+                    <textarea id="projectExample" name="projectExample"></textarea>
+                </div>
+
+                <!-- Work Preferences -->
+                <div class="section-title">Work Preferences</div>
+
+                <div class="form-group">
+                    <label>Preferred Work Location</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="onsite" name="workLocation" value="onsite">
+                            <label for="onsite">On-site</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="hybrid" name="workLocation" value="hybrid">
+                            <label for="hybrid">Hybrid</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="remote" name="workLocation" value="remote">
+                            <label for="remote">Remote</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="startDate">Earliest Start Date</label>
+                    <input type="date" id="startDate" name="startDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="expectedSalary">Expected Salary Range (Annual, USD)</label>
+                    <input type="text" id="expectedSalary" name="expectedSalary" 
+                           placeholder="e.g., 80,000 - 100,000">
+                </div>
+
+                <!-- Eligibility -->
+                <div class="section-title">Eligibility</div>
+
+                <div class="form-group">
+                    <label>Are you legally authorized to work in the United States?</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="authorizedYes" name="workAuthorization" value="yes">
+                            <label for="authorizedYes">Yes</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="authorizedNo" name="workAuthorization" value="no">
+                            <label for="authorizedNo">No</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Will you now or in the future require sponsorship for employment visa status?</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="sponsorshipYes" name="sponsorship" value="yes">
+                            <label for="sponsorshipYes">Yes</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="sponsorshipNo" name="sponsorship" value="no">
+                            <label for="sponsorshipNo">No</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Additional Preferences (check all that apply)</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="openSource" name="preferences" value="openSource">
+                            <label for="openSource">Interested in open source contributions</label>
+                        </div>
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="mentorship" name="preferences" value="mentorship">
+                            <label for="mentorship">Interested in mentorship opportunities</label>
+                        </div>
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="leadership" name="preferences" value="leadership">
+                            <label for="leadership">Interested in leadership roles</label>
+                        </div>
+                        <div class="checkbox-option">
+                            <input type="checkbox" id="research" name="preferences" value="research">
+                            <label for="research">Interested in R&D work</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="section-title">Additional Information</div>
+
+                <div class="form-group">
+                    <label for="linkedin">LinkedIn Profile URL</label>
+                    <input type="text" id="linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourprofile">
+                </div>
+
+                <div class="form-group">
+                    <label for="github">GitHub Profile URL</label>
+                    <input type="text" id="github" name="github" placeholder="https://github.com/yourusername">
+                </div>
+
+                <div class="form-group">
+                    <label for="portfolio">Portfolio Website</label>
+                    <input type="text" id="portfolio" name="portfolio" placeholder="https://yourportfolio.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="referral">How did you hear about this position?</label>
+                    <select id="referral" name="referral">
+                        <option value="">Select...</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="indeed">Indeed</option>
+                        <option value="company-website">Company Website</option>
+                        <option value="referral">Employee Referral</option>
+                        <option value="recruiter">Recruiter</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="additionalInfo">Additional Comments or Information</label>
+                    <textarea id="additionalInfo" name="additionalInfo" 
+                              placeholder="Anything else you'd like us to know?"></textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="submit-section">
+            <button type="submit" class="submit-btn" onclick="submitForm()">Submit Application</button>
+            <p style="margin-top: 15px; color: #6c757d; font-size: 14px;">
+                This is a test form - no data will be submitted
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function submitForm() {
+            const form = document.getElementById('jobApplicationForm');
+            
+            // Validate required fields
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Collect all form data
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                if (data[key]) {
+                    // Handle multiple values (like checkboxes)
+                    if (Array.isArray(data[key])) {
+                        data[key].push(value);
+                    } else {
+                        data[key] = [data[key], value];
+                    }
+                } else {
+                    data[key] = value;
+                }
+            }
+
+            // Show success message
+            alert('✅ Application Submitted Successfully!\n\nThis is a test form. In a real application, your data would be processed here.\n\nForm Data:\n' + JSON.stringify(data, null, 2));
+            
+            console.log('Form data:', data);
+        }
+
+        // Add visual feedback when fields are filled
+        document.querySelectorAll('input, textarea, select').forEach(field => {
+            field.addEventListener('change', function() {
+                if (this.value) {
+                    this.style.backgroundColor = '#e7f3ff';
+                } else {
+                    this.style.backgroundColor = 'white';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

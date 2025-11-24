@@ -1,139 +1,184 @@
-# Quick Start Guide
+# Quick Start Guide - Job Application Filler
 
-Get up and running in 5 minutes!
+## 🚀 Simple 3-Step Setup
 
-## 1. Install Python 3.9+
-
-Check if you have Python:
+### Step 1: Start Backend
 ```bash
-python --version
+python backend.py
 ```
 
-If not installed, download from: https://www.python.org/downloads/
-
-## 2. Get Gemini API Key
-
-1. Go to: https://makersuite.google.com/app/apikey
-2. Click "Create API Key"
-3. Copy the key
-
-## 3. Setup Project
-
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate (Windows)
-venv\Scripts\activate
-
-# Activate (Mac/Linux)
-# source venv/bin/activate
-
-# Install packages
-pip install -r requirements.txt
-
-# Install browser
-playwright install chromium
+You should see:
+```
+✓ Resume parsed: 5234 characters
+  Name: Toni Liang
+  Email: your@email.com
+✓ Loaded 0 historical answers
+✓ Gemini API initialized
+✓ Backend ready!
 ```
 
-## 4. Configure API Key
+### Step 2: Load Extension
+1. Go to `chrome://extensions`
+2. Enable "Developer mode" (top right)
+3. Click "Load unpacked"
+4. Select the `chrome-extension` folder
+5. Click the extension icon (should show "Server Connected" 🟢)
 
-Create a file named `.env` in the project root:
+### Step 3: Fill Application
+1. Open any job application page (or `test-job-application.html`)
+2. Click extension icon
+3. Click **"✨ Fill Application"** button
+4. Watch it auto-fill!
 
+---
+
+## 💡 How It Works
+
+### First Time Using:
 ```
-GEMINI_API_KEY=your_actual_api_key_here
-```
-
-See `ENV_SETUP.txt` for detailed instructions.
-
-## 5. Add Your Documents
-
-Put your resume, cover letter, etc. in:
-```
-data/documents/
-```
-
-Supported formats: PDF, DOCX, TXT
-
-## 6. Ingest Documents
-
-```bash
-python main.py ingest
-```
-
-Wait for it to process (~1-2 minutes first time).
-
-## 7. Fill Your First Application
-
-```bash
-python main.py fill --interactive
-```
-
-Then:
-1. Browser opens
-2. Navigate to job application
-3. Press ENTER in terminal
-4. Review each generated answer
-5. Press 'F' to fill or 'E' to edit
-6. Submit form manually
-
-## That's It!
-
-You're ready to use the Job Application Filler!
-
-## Next Steps
-
-- Read [USAGE_GUIDE.md](USAGE_GUIDE.md) for all commands
-- See [EXAMPLES.md](EXAMPLES.md) for sample workflows
-- Check [SETUP_GUIDE.md](SETUP_GUIDE.md) for troubleshooting
-
-## Quick Command Reference
-
-```bash
-# Check status
-python main.py status
-
-# Test API
-python main.py test-llm
-
-# Search your documents
-python main.py search "Python"
-
-# View answer history
-python main.py history --recent 10
-
-# Fill application (interactive)
-python main.py fill --interactive
-
-# Fill application (auto)
-python main.py fill --batch
+Click "Fill Application"
+    ↓
+Extension detects all fields
+    ↓
+Auto-fills:
+  ✅ Name, email, phone (from resume)
+  ✅ Essay questions (AI-generated drafts)
+    ↓
+Shows you which fields need manual input:
+  ❓ "Are you authorized to work in the US?"
+  ❓ "Years of experience?"
+    ↓
+You fill those fields on the webpage
+    ↓
+Click "💾 Save My Answers for Next Time"
+    ↓
+Done! Extension remembers these answers forever.
 ```
 
-## Getting Help
+### Second Application (And All Future Ones):
+```
+Click "Fill Application"
+    ↓
+Auto-fills EVERYTHING:
+  ✅ Name, email, phone
+  ✅ All previously answered questions
+  ✅ AI-generated essays
+    ↓
+Just review and submit!
+```
 
-If something doesn't work:
+---
 
-1. Run: `python main.py status`
-2. Check error messages
-3. See [SETUP_GUIDE.md](SETUP_GUIDE.md) troubleshooting section
-4. Verify `.env` file has correct API key
+## 🎯 Important: How the Popup Works
 
-## Free Tier Limits
+**The extension popup closes when you click on the page - this is normal Chrome behavior!**
 
-Gemini Free Tier:
-- 15 requests/minute
-- 1,500 requests/day
-- More than enough for job applications!
+### Don't Worry - Your Progress is Saved!
 
-Interactive mode naturally stays within limits.
+1. Click "Fill Application" → Fields fill automatically
+2. Popup shows "5 Need Input" with list of unknown fields
+3. **Click on the page** → Popup closes (this is expected!)
+4. Fill the 5 fields manually on the page
+5. **Click extension icon again** → Popup reopens
+6. **Your progress is restored!** Still shows "5 Need Input"
+7. Click "💾 Save My Answers for Next Time"
+8. Done! Next time these will auto-fill ✅
 
-## Tips
+### Key Points:
+- ✅ **Popup remembers your progress** for 10 minutes
+- ✅ **State persists per tab** - Each tab tracks independently
+- ✅ **Auto-cleanup** - State clears after you save or after 10 minutes
+- ✅ **No need to keep popup open** - Just reopen when ready to save
 
-1. **Use Interactive Mode First**: Review answers before filling
-2. **Start with Resume**: Make sure your resume is complete
-3. **Test Search**: Verify documents ingested correctly
-4. **Edit When Needed**: Don't hesitate to modify answers
-5. **Build History**: The more you use it, the better it gets
+---
 
-Happy job hunting! 🎉
+## 🎯 The New Workflow (What Changed)
 
+### Before (Old System):
+1. Click "Detect Fields" ← Extra step
+2. Click "Start Filling"
+3. Review each field one-by-one
+4. Manual answers weren't saving properly ❌
+
+### After (New System):
+1. Click "Fill Application" ← ONE button
+2. Everything fills instantly
+3. Manual answers properly saved ✅
+4. Clear visual feedback
+
+---
+
+## 📊 What Gets Filled Automatically
+
+### Resume Fields (Instant):
+- ✅ Full Name
+- ✅ Email Address  
+- ✅ Phone Number
+- ✅ Location/Address
+
+### Closed-Ended Questions (After First Time):
+- ✅ "Are you authorized to work in the US?"
+- ✅ "Years of experience"
+- ✅ "Desired salary"
+- ✅ Dropdown selections (employment type, location preference, etc.)
+
+### Open-Ended Questions (AI-Generated):
+- ✅ "Why do you want to work here?"
+- ✅ "Tell us about yourself"
+- ✅ "Describe a challenging project"
+- ⚠️ **Always review AI answers before submitting!**
+
+---
+
+## 🔧 Troubleshooting
+
+### "Server Offline" ❌
+**Fix:** Run `python backend.py` in a terminal
+
+### "No fields detected"
+**Fix:** 
+1. Refresh the job application page
+2. Make sure there are actual form fields (not just links)
+
+### "Save My Answers" doesn't work
+**Fix:** 
+1. Fill the fields **on the webpage** first
+2. Then click "Save My Answers" in the extension
+
+### AI answers are weird
+**Fix:**
+1. Update your resume in `data/documents/`
+2. Restart backend: `python backend.py`
+
+---
+
+## 💾 Your Data
+
+### Where It's Stored:
+```
+data/
+├── documents/
+│   └── RESUME TONI LIANG.pdf    ← Your resume (parsed on startup)
+└── qa_history.json               ← Your saved answers (persistent)
+```
+
+### To Clear History:
+Click "🗑️ Clear History" in extension footer
+
+---
+
+## ✨ Pro Tips
+
+1. **First 5-10 applications take longer** - You're building your answer database
+2. **After that, most fields auto-fill** - Just review and submit!
+3. **Always review AI-generated essays** - They're drafts, not final answers
+4. **Update resume → Restart backend** - To use new resume data
+5. **Consistent answers build faster** - Try to answer similarly across applications
+
+---
+
+## 🎉 You're Ready!
+
+The extension learns from every application you fill. The more you use it, the smarter it gets!
+
+**Next Application:** Should take < 1 minute to fill 🚀

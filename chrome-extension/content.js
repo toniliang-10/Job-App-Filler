@@ -1,43 +1,47 @@
-// Content script - runs on web pages to detect and fill form fields
+// Content script - Detects and fills form fields
 
 console.log('Job Application Filler: Content script loaded');
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'detectFields') {
-    const fields = detectFormFields();
+    const fields = detectAndClassifyFields();
     sendResponse({ fields: fields });
-  } else if (request.action === 'fillFields') {
-    fillFormFields(request.answers, request.mode);
-    sendResponse({ success: true, filled: request.answers.length });
+  } 
+  else if (request.action === 'fillFields') {
+    fillFormFields(request.fields, request.mode);
+    sendResponse({ success: true });
   }
-  return true; // Keep channel open for async response
+  else if (request.action === 'getFieldValues') {
+    const values = getFieldValues(request.fieldIndexes);
+    sendResponse({ values: values });
+  }
+  return true;
 });
 
-function detectFormFields() {
+function detectAndClassifyFields() {
   const fields = [];
   let fieldIndex = 0;
 
-  // Detect text inputs and email/phone fields
-  const inputs = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"])');
+  // Detect all input fields
+  const inputs = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"])');
+  
   inputs.forEach(input => {
     const type = input.type || 'text';
     
-    // Skip radio and checkbox for now (handle separately)
-    if (type === 'radio' || type === 'checkbox') return;
+    // Skip file inputs
+    if (type === 'file') return;
     
     const field = {
       index: fieldIndex++,
-      element_id: input.id || generateUniqueId(),
-      field_type: classifyInputType(type, input),
+      element_type: type,
+      field_category: classifyField(input, type),
       label: extractLabel(input),
       name: input.name || '',
       placeholder: input.placeholder || '',
-      required: input.required || false,
-      value: input.value || ''
+      required: input.required || false
     };
     
-    // Store element reference for later filling
     input.setAttribute('data-jaf-index', field.index);
     
     if (field.label || field.name || field.placeholder) {
@@ -45,26 +49,24 @@ function detectFormFields() {
     }
   });
 
-  // Detect textareas
+  // Detect textareas (usually open-ended)
   const textareas = document.querySelectorAll('textarea');
   textareas.forEach(textarea => {
     const field = {
       index: fieldIndex++,
-      element_id: textarea.id || generateUniqueId(),
-      field_type: 'textarea',
+      element_type: 'textarea',
+      field_category: 'open-ended',
       label: extractLabel(textarea),
       name: textarea.name || '',
       placeholder: textarea.placeholder || '',
-      required: textarea.required || false,
-      value: textarea.value || ''
+      required: textarea.required || false
     };
     
     textarea.setAttribute('data-jaf-index', field.index);
-    
     fields.push(field);
   });
 
-  // Detect select dropdowns
+  // Detect select dropdowns (closed-ended)
   const selects = document.querySelectorAll('select');
   selects.forEach(select => {
     const options = Array.from(select.querySelectorAll('option'))
@@ -73,23 +75,21 @@ function detectFormFields() {
     
     const field = {
       index: fieldIndex++,
-      element_id: select.id || generateUniqueId(),
-      field_type: 'select',
+      element_type: 'select',
+      field_category: 'closed-ended',
       label: extractLabel(select),
       name: select.name || '',
-      required: select.required || false,
       options: options,
-      value: select.value || ''
+      required: select.required || false
     };
     
     select.setAttribute('data-jaf-index', field.index);
-    
     fields.push(field);
   });
 
-  // Detect radio button groups
-  const radios = document.querySelectorAll('input[type="radio"]');
+  // Detect radio button groups (closed-ended)
   const radioGroups = new Map();
+  const radios = document.querySelectorAll('input[type="radio"]');
   
   radios.forEach(radio => {
     const name = radio.name;
@@ -116,93 +116,131 @@ function detectFormFields() {
     const firstRadio = group.elements[0];
     const field = {
       index: group.index,
-      element_id: name,
-      field_type: 'radio',
+      element_type: 'radio',
+      field_category: 'closed-ended',
       label: extractLabel(firstRadio, false) || findGroupLabel(firstRadio) || name,
       name: name,
-      required: false,
-      options: group.options
+      options: group.options,
+      required: false
     };
     
     group.elements.forEach(radio => {
       radio.setAttribute('data-jaf-index', field.index);
+      radio.setAttribute('data-jaf-group', name);
     });
     
     fields.push(field);
   });
 
-  // Detect checkboxes
+  // Detect checkboxes (closed-ended)
   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
   checkboxes.forEach(checkbox => {
     const field = {
       index: fieldIndex++,
-      element_id: checkbox.id || generateUniqueId(),
-      field_type: 'checkbox',
+      element_type: 'checkbox',
+      field_category: 'closed-ended',
       label: extractLabel(checkbox, true),
       name: checkbox.name || '',
-      required: checkbox.required || false,
-      value: checkbox.checked ? 'Yes' : 'No'
+      required: checkbox.required || false
     };
     
     checkbox.setAttribute('data-jaf-index', field.index);
-    
     fields.push(field);
   });
 
-  console.log(`Detected ${fields.length} form fields`);
+  console.log(`Detected ${fields.length} fields:`,
+    `${fields.filter(f => f.field_category === 'closed-ended').length} closed,`,
+    `${fields.filter(f => f.field_category === 'open-ended').length} open,`,
+    `${fields.filter(f => f.field_category === 'resume-data').length} resume data`
+  );
+  
   return fields;
 }
 
-function classifyInputType(type, element) {
-  const typeMap = {
-    'email': 'email',
-    'tel': 'phone',
-    'phone': 'phone',
-    'date': 'date',
-    'number': 'number',
-    'text': 'text'
-  };
+function getFieldValues(fieldIndexes) {
+  /**
+   * NEW FUNCTION: Get current values of specified fields from the page
+   */
+  const values = {};
   
-  if (typeMap[type]) return typeMap[type];
+  for (const index of fieldIndexes) {
+    const elements = document.querySelectorAll(`[data-jaf-index="${index}"]`);
+    
+    if (elements.length === 0) continue;
+    
+    const element = elements[0];
+    let value = '';
+    
+    if (element.type === 'radio') {
+      // For radio groups, find the checked one
+      const groupName = element.getAttribute('data-jaf-group');
+      if (groupName) {
+        const checkedRadio = document.querySelector(`input[type="radio"][data-jaf-group="${groupName}"]:checked`);
+        if (checkedRadio) {
+          value = extractLabel(checkedRadio, true);
+        }
+      }
+    } else if (element.type === 'checkbox') {
+      value = element.checked ? 'Yes' : 'No';
+    } else if (element.tagName === 'SELECT') {
+      const selectedOption = element.options[element.selectedIndex];
+      value = selectedOption ? selectedOption.textContent.trim() : '';
+    } else {
+      value = element.value;
+    }
+    
+    values[index] = value;
+  }
   
-  // Try to infer from name/id/placeholder
-  const combined = `${element.name} ${element.id} ${element.placeholder}`.toLowerCase();
+  console.log('Read field values:', values);
+  return values;
+}
+
+function classifyField(element, type) {
+  const label = extractLabel(element).toLowerCase();
+  const name = (element.name || '').toLowerCase();
+  const placeholder = (element.placeholder || '').toLowerCase();
+  const combined = `${label} ${name} ${placeholder}`;
   
-  if (combined.includes('email') || combined.includes('e-mail')) return 'email';
-  if (combined.includes('phone') || combined.includes('tel') || combined.includes('mobile')) return 'phone';
-  if (combined.includes('date') || combined.includes('dob')) return 'date';
+  // Resume data fields
+  if (combined.includes('name') && !combined.includes('company')) {
+    return 'resume-data';
+  }
+  if (combined.includes('email') || type === 'email') {
+    return 'resume-data';
+  }
+  if (combined.includes('phone') || combined.includes('tel') || type === 'tel') {
+    return 'resume-data';
+  }
+  if (combined.includes('location') || combined.includes('address') || combined.includes('city')) {
+    return 'resume-data';
+  }
   
-  return 'text';
+  return 'closed-ended';
 }
 
 function extractLabel(element, includeNearby = true) {
-  // Method 1: Label with for attribute
   if (element.id) {
     const label = document.querySelector(`label[for="${element.id}"]`);
     if (label) return label.textContent.trim();
   }
   
-  // Method 2: Parent label
   const parentLabel = element.closest('label');
   if (parentLabel) {
-    // Get text without the input
     const clone = parentLabel.cloneNode(true);
     const inputClone = clone.querySelector('input, select, textarea');
     if (inputClone) inputClone.remove();
     return clone.textContent.trim();
   }
   
-  // Method 3: aria-label
   if (element.getAttribute('aria-label')) {
     return element.getAttribute('aria-label').trim();
   }
   
-  // Method 4: placeholder (if allowed)
   if (includeNearby && element.placeholder) {
     return element.placeholder.trim();
   }
   
-  // Method 5: nearby text
   if (includeNearby) {
     const prev = element.previousElementSibling;
     if (prev && (prev.tagName === 'LABEL' || prev.tagName === 'SPAN')) {
@@ -222,59 +260,57 @@ function findGroupLabel(element) {
   return '';
 }
 
-function generateUniqueId() {
-  return 'jaf-' + Math.random().toString(36).substr(2, 9);
-}
-
-async function fillFormFields(answers, mode) {
-  console.log(`Filling ${answers.length} fields in ${mode} mode`);
+async function fillFormFields(fieldsWithAnswers, mode) {
+  console.log(`Filling ${fieldsWithAnswers.length} fields`);
   
-  for (const answer of answers) {
-    const elements = document.querySelectorAll(`[data-jaf-index="${answer.index}"]`);
+  for (const fieldData of fieldsWithAnswers) {
+    const elements = document.querySelectorAll(`[data-jaf-index="${fieldData.index}"]`);
     
-    if (elements.length === 0) {
-      console.warn(`No element found for index ${answer.index}`);
+    if (elements.length === 0) continue;
+    
+    const element = elements[0];
+    const value = fieldData.answer;
+    
+    // Skip if no value or if it's placeholder/error text
+    if (!value || !value.trim()) continue;
+    const valueLower = value.toLowerCase();
+    if (valueLower.includes('user provided answer') || 
+        valueLower.includes('placeholder') ||
+        valueLower.includes('error') ||
+        valueLower.includes('question not in history')) {
+      console.log(`Skipping placeholder text for field: ${fieldData.label}`);
       continue;
     }
     
-    const element = elements[0];
-    const value = answer.answer;
+    // Scroll to field
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    await sleep(200);
     
-    // In interactive mode, ask for confirmation
-    if (mode === 'interactive') {
-      // Highlight the field
-      highlightElement(element);
-      
-      const confirmed = confirm(
-        `Field: ${answer.question}\n\n` +
-        `Suggested answer: ${value}\n\n` +
-        `Confidence: ${Math.round(answer.confidence * 100)}%\n\n` +
-        `Fill this field?`
-      );
-      
-      unhighlightElement(element);
-      
-      if (!confirmed) {
-        continue;
-      }
-    }
+    // Highlight field briefly
+    const originalStyle = element.style.cssText;
+    element.style.outline = '3px solid #667eea';
+    element.style.outlineOffset = '2px';
     
-    // Fill based on field type
-    if (answer.field_type === 'select') {
-      fillSelect(element, value);
-    } else if (answer.field_type === 'radio') {
+    await sleep(300);
+    
+    // Fill based on type
+    if (fieldData.element_type === 'select') {
+      fillSelect(element, value, fieldData.options);
+    } else if (fieldData.element_type === 'radio') {
       fillRadio(elements, value);
-    } else if (answer.field_type === 'checkbox') {
+    } else if (fieldData.element_type === 'checkbox') {
       fillCheckbox(element, value);
     } else {
       fillText(element, value);
     }
     
-    // Add small delay between fields (human-like)
-    await sleep(300);
+    // Remove highlight
+    element.style.cssText = originalStyle;
+    
+    await sleep(200);
   }
   
-  console.log('Form filling complete');
+  console.log('Filling complete');
 }
 
 function fillText(element, value) {
@@ -283,71 +319,48 @@ function fillText(element, value) {
   element.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function fillSelect(element, value) {
-  // Try exact match first
-  const options = Array.from(element.options);
-  let matched = false;
+function fillSelect(element, value, options) {
+  const selectOptions = Array.from(element.options);
   
-  for (const option of options) {
+  for (const option of selectOptions) {
     if (option.textContent.trim().toLowerCase() === value.toLowerCase()) {
       element.value = option.value;
-      matched = true;
-      break;
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
     }
   }
   
-  // Try fuzzy match if no exact match
-  if (!matched) {
-    for (const option of options) {
-      if (option.textContent.trim().toLowerCase().includes(value.toLowerCase()) ||
-          value.toLowerCase().includes(option.textContent.trim().toLowerCase())) {
-        element.value = option.value;
-        matched = true;
-        break;
-      }
+  for (const option of selectOptions) {
+    if (option.textContent.trim().toLowerCase().includes(value.toLowerCase())) {
+      element.value = option.value;
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
     }
-  }
-  
-  if (matched) {
-    element.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 
 function fillRadio(elements, value) {
   for (const radio of elements) {
     const label = extractLabel(radio, true);
-    if (label.toLowerCase().includes(value.toLowerCase()) ||
-        value.toLowerCase().includes(label.toLowerCase())) {
+    if (label.toLowerCase().includes(value.toLowerCase())) {
       radio.checked = true;
       radio.dispatchEvent(new Event('change', { bubbles: true }));
-      break;
+      return;
     }
   }
 }
 
 function fillCheckbox(element, value) {
-  const shouldCheck = value.toLowerCase().includes('yes') || 
-                     value.toLowerCase().includes('true');
+  const shouldCheck = value.toLowerCase().includes('yes') || value.toLowerCase().includes('true');
   element.checked = shouldCheck;
   element.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function highlightElement(element) {
-  element.style.outline = '3px solid #667eea';
-  element.style.outlineOffset = '2px';
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function unhighlightElement(element) {
-  element.style.outline = '';
-  element.style.outlineOffset = '';
 }
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Visual indicator that extension is active
+// Visual indicator
 const indicator = document.createElement('div');
 indicator.style.cssText = `
   position: fixed;
@@ -361,17 +374,12 @@ indicator.style.cssText = `
   font-weight: 600;
   z-index: 999999;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: none;
 `;
-indicator.textContent = '🚀 Job App Filler Active';
+indicator.textContent = '🚀 Auto-Fill Active';
 document.body.appendChild(indicator);
 
-// Show indicator briefly when page loads
 setTimeout(() => {
   indicator.style.display = 'block';
-  setTimeout(() => {
-    indicator.style.display = 'none';
-  }, 3000);
+  setTimeout(() => indicator.style.display = 'none', 2000);
 }, 1000);
-
