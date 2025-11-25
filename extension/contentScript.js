@@ -7,6 +7,7 @@ const STATE = {
 let INITIALIZED = false;
 
 const BUTTON_ID = "job-app-filler-button";
+const NOTIFICATION_ID = "job-app-filler-notification";
 
 async function getConfig() {
   const fromStorage = await chrome.storage.sync.get(["backendUrl", "autoDraftOpenEnded"]);
@@ -35,6 +36,66 @@ function ensureButton() {
   btn.style.fontFamily = "Inter, 'Segoe UI', system-ui, sans-serif";
   btn.addEventListener("click", handleAutoFill);
   document.body.appendChild(btn);
+}
+
+function showNotification(message, type = "success") {
+  // Remove existing notification if any
+  const existing = document.getElementById(NOTIFICATION_ID);
+  if (existing) {
+    existing.remove();
+  }
+
+  const notification = document.createElement("div");
+  notification.id = NOTIFICATION_ID;
+  notification.textContent = message;
+  
+  // Base styles
+  notification.style.position = "fixed";
+  notification.style.top = "20px";
+  notification.style.right = "20px";
+  notification.style.zIndex = 1000000;
+  notification.style.padding = "16px 24px";
+  notification.style.borderRadius = "12px";
+  notification.style.boxShadow = "0 10px 40px rgba(0,0,0,0.25)";
+  notification.style.fontFamily = "Inter, 'Segoe UI', system-ui, sans-serif";
+  notification.style.fontSize = "14px";
+  notification.style.fontWeight = "600";
+  notification.style.maxWidth = "400px";
+  notification.style.wordWrap = "break-word";
+  notification.style.transition = "all 0.3s ease";
+  notification.style.opacity = "0";
+  notification.style.transform = "translateY(-10px)";
+  
+  // Type-specific styling
+  if (type === "success") {
+    notification.style.background = "linear-gradient(135deg, #10b981, #059669)";
+    notification.style.color = "#ffffff";
+  } else if (type === "error") {
+    notification.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
+    notification.style.color = "#ffffff";
+  } else if (type === "info") {
+    notification.style.background = "linear-gradient(135deg, #3b82f6, #2563eb)";
+    notification.style.color = "#ffffff";
+  }
+  
+  document.body.appendChild(notification);
+  
+  // Trigger fade-in animation
+  setTimeout(() => {
+    notification.style.opacity = "1";
+    notification.style.transform = "translateY(0)";
+  }, 10);
+  
+  // Auto-dismiss after 4 seconds
+  setTimeout(() => {
+    notification.style.opacity = "0";
+    notification.style.transform = "translateY(-10px)";
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 300);
+  }, 4000);
 }
 
 async function fetchResume() {
@@ -95,6 +156,10 @@ function inferContactValue(labelText, resume) {
     const last = parts.length > 1 ? parts[parts.length - 1] : "";
     return last || "";
   }
+  if (label.includes("middle name") || label.includes("middle initial")) {
+    // Most resumes don't have middle name, return empty
+    return "";
+  }
   if (label.includes("first name") || label.includes("given name") || label.includes("forename")) {
     const first = (resume.full_name || "").split(" ").filter(Boolean)[0];
     return first || "";
@@ -106,15 +171,15 @@ function inferContactValue(labelText, resume) {
   }
   if (label.includes("preferred name")) return resume.full_name || "";
   if (label.includes("full name") || label.includes("complete name")) return resume.full_name || "";
-  if (label.includes("name") && !label.includes("user") && !label.includes("file")) {
+  if (label.includes("name") && !label.includes("user") && !label.includes("file") && !label.includes("company")) {
     // Generic "name" field - prefer full name
     return resume.full_name || "";
   }
   
-  // Other contact info
+  // Contact info
   if (label.includes("email")) return resume.email || "";
-  if (label.includes("phone")) return resume.phone || "";
-  if (label.includes("city")) {
+  if (label.includes("phone") || label.includes("mobile") || label.includes("telephone")) return resume.phone || "";
+  if (label.includes("city") && !label.includes("citizenship")) {
     // Try to extract city from resume location or return null to use stored answer
     const location = resume.location || "";
     if (location) {
@@ -124,13 +189,59 @@ function inferContactValue(labelText, resume) {
     }
     return null; // Let it fall through to stored answers
   }
+  if (label.includes("state") || label.includes("province")) {
+    const location = resume.location || "";
+    if (location && location.includes(",")) {
+      const parts = location.split(",");
+      if (parts.length >= 2) {
+        // Return the part after the first comma (usually state)
+        return parts[1].trim().split(",")[0].trim();
+      }
+    }
+    return null;
+  }
+  if (label.includes("country") && !label.includes("phone")) {
+    const location = resume.location || "";
+    if (location && location.includes(",")) {
+      const parts = location.split(",");
+      if (parts.length >= 3) {
+        // Return the last part (usually country)
+        return parts[parts.length - 1].trim();
+      }
+    }
+    return null;
+  }
+  
+  // Social profiles
   if (label.includes("linkedin")) return resume.linkedin || resume.links?.linkedin || "";
   if (label.includes("github")) return resume.github || resume.links?.github || "";
-  if (label.includes("address") || (label.includes("location") && !label.includes("city")))
+  if (label.includes("portfolio")) return resume.portfolio || resume.links?.portfolio || "";
+  if (label.includes("website") || label.includes("personal site")) return resume.website || resume.portfolio || "";
+  
+  // Education fields
+  if (label.includes("university") || label.includes("college") || (label.includes("school") && !label.includes("high"))) {
+    return (resume.education || [])[0] || "";
+  }
+  if (label.includes("major") || label.includes("field of study")) {
+    // Try to extract from education array or return null
+    return null;
+  }
+  if (label.includes("degree") && !label.includes("level")) {
+    return null;
+  }
+  
+  // Address fields (most resumes don't have detailed address)
+  if (label.includes("street address") || label.includes("address line")) return "";
+  if (label.includes("apt") || label.includes("apartment") || label.includes("unit")) return "";
+  if (label.includes("zip") || label.includes("postal")) return "";
+  
+  // Generic fallbacks
+  if (label.includes("address") || (label.includes("location") && !label.includes("city") && !label.includes("work")))
     return resume.location || "";
-  if (label.includes("education")) return (resume.education || []).join("; ");
-  if (label.includes("experience")) return (resume.experience || []).join("; ");
+  if (label.includes("education") && !label.includes("level")) return (resume.education || []).join("; ");
+  if (label.includes("experience") && !label.includes("years")) return (resume.experience || []).join("; ");
   if (label.includes("skill")) return (resume.skills || []).join(", ");
+  
   return null;
 }
 
@@ -153,26 +264,127 @@ function detectIntent(text) {
   if (t.includes("legal last name") || t.includes("legal last")) return "legal-last-name";
   if (t.includes("first name") || t.includes("given name") || t.includes("forename")) return "first-name";
   if (t.includes("last name") || t.includes("surname") || t.includes("family name")) return "last-name";
+  if (t.includes("middle name")) return "middle-name";
+  if (t.includes("middle initial")) return "middle-initial";
+  if (t.includes("suffix") || t.includes("jr") || t.includes("sr") || t.includes("iii")) return "suffix";
   if (t.includes("preferred name")) return "preferred-name";
   if (t.includes("full name") || t.includes("your name") || t.includes("complete name")) return "full-name";
-  if (t.includes("name") && !t.includes("user") && !t.includes("file")) return "name";
+  if (t.includes("name") && !t.includes("user") && !t.includes("file") && !t.includes("company")) return "name";
   
-  // Other contact info
-  if (t.includes("city")) return "city";
+  // Contact info
+  if (t.includes("street address") || t.includes("address line 1")) return "street-address";
+  if (t.includes("address line 2") || t.includes("apartment") || t.includes("apt") || t.includes("unit")) return "address-line-2";
+  if (t.includes("city") && !t.includes("citizenship")) return "city";
+  if (t.includes("state") || t.includes("province") || t.includes("region")) return "state";
+  if (t.includes("zip") || t.includes("postal code")) return "zip-code";
+  if (t.includes("country") && !t.includes("phone")) return "country";
+  if (t.includes("phone") || t.includes("mobile") || t.includes("telephone") || t.includes("cell")) return "phone";
+  if (t.includes("email")) return "email";
+  
+  // Social media and web presence
   if (t.includes("linkedin")) return "linkedin";
   if (t.includes("github") || t.includes("git hub")) return "github";
   if (t.includes("portfolio")) return "portfolio";
-  if (t.includes("website") || t.includes("url")) return "website";
-  if (t.includes("phone")) return "phone";
-  if (t.includes("email")) return "email";
+  if (t.includes("twitter")) return "twitter";
+  if (t.includes("website") || (t.includes("personal") && t.includes("site"))) return "website";
   
-  // Authorization and preferences
-  if (t.includes("citizen") || t.includes("work authorization") || t.includes("authorized"))
+  // Education
+  if (t.includes("university") || t.includes("college") || (t.includes("school") && !t.includes("high school"))) return "university";
+  if (t.includes("degree") && !t.includes("level")) return "degree";
+  if (t.includes("highest") && (t.includes("education") || t.includes("degree"))) return "education-level";
+  if (t.includes("major") || t.includes("field of study") || t.includes("concentration")) return "major";
+  if (t.includes("minor")) return "minor";
+  if (t.includes("gpa") || t.includes("grade point")) return "gpa";
+  if (t.includes("graduation") && (t.includes("date") || t.includes("year"))) return "graduation-date";
+  if (t.includes("graduation year")) return "graduation-year";
+  
+  // Work experience
+  if (t.includes("years of experience") || t.includes("professional experience")) return "years-experience";
+  if (t.includes("relevant experience")) return "relevant-experience";
+  if (t.includes("python") && t.includes("experience")) return "python-experience";
+  if (t.includes("javascript") && t.includes("experience")) return "javascript-experience";
+  if (t.includes("react") && t.includes("experience")) return "react-experience";
+  if (t.includes("node") && t.includes("experience")) return "node-experience";
+  if (t.includes("sql") && t.includes("experience")) return "sql-experience";
+  if (t.includes("current") && (t.includes("company") || t.includes("employer"))) return "current-company";
+  if (t.includes("current") && (t.includes("title") || t.includes("position"))) return "current-title";
+  if (t.includes("previous") && (t.includes("company") || t.includes("employer"))) return "previous-company";
+  if (t.includes("management experience")) return "management-experience";
+  
+  // Skills
+  if (t.includes("programming") && (t.includes("language") || t.includes("skill"))) return "programming-languages";
+  if (t.includes("technical skills")) return "technical-skills";
+  if (t.includes("database") && (t.includes("experience") || t.includes("skill"))) return "database-skills";
+  if (t.includes("framework") || t.includes("technolog")) return "frameworks";
+  if (t.includes("certification")) return "certifications";
+  if (t.includes("aws") || t.includes("cloud")) return "cloud-experience";
+  
+  // Authorization and legal
+  if (t.includes("legally authorized") || t.includes("work authorization") || t.includes("authorized to work"))
     return "authorization";
   if (t.includes("visa") || t.includes("sponsor") || t.includes("sponsorship")) return "visa";
-  if (t.includes("relocation") || t.includes("remote") || t.includes("hybrid"))
-    return "location-preference";
-  if (t.includes("how did you hear") || t.includes("hear about us") || t.includes("source")) return "referral-source";
+  if (t.includes("citizen") && !t.includes("authorization")) return "citizenship";
+  if (t.includes("security clearance")) return "security-clearance";
+  if (t.includes("felony") || t.includes("convicted")) return "criminal-record";
+  if (t.includes("driver") && t.includes("license")) return "drivers-license";
+  
+  // Work preferences
+  if (t.includes("relocation") || t.includes("willing to relocate")) return "relocation";
+  if (t.includes("remote") && !t.includes("work location")) return "remote-preference";
+  if (t.includes("hybrid") && !t.includes("work location")) return "hybrid-preference";
+  if (t.includes("work location") || t.includes("location preference")) return "location-preference";
+  if (t.includes("full") && t.includes("time")) return "employment-type-fulltime";
+  if (t.includes("part") && t.includes("time")) return "employment-type-parttime";
+  if (t.includes("employment type")) return "employment-type";
+  
+  // Availability and start date
+  if (t.includes("start date") || t.includes("earliest") || t.includes("available to start")) return "start-date";
+  if (t.includes("notice period")) return "notice-period";
+  if (t.includes("availability") || t.includes("available for interview")) return "availability";
+  if (t.includes("currently employed")) return "currently-employed";
+  
+  // Compensation
+  if (t.includes("salary") && (t.includes("expectation") || t.includes("desired") || t.includes("expected"))) 
+    return "salary-expectation";
+  
+  // Travel and schedule
+  if (t.includes("travel") && (t.includes("willing") || t.includes("percentage") || t.includes("can you"))) 
+    return "travel-willingness";
+  if (t.includes("work nights") || t.includes("work weekends") || t.includes("overtime")) return "schedule-flexibility";
+  if (t.includes("office") && t.includes("per week")) return "office-days";
+  
+  // Referrals and discovery
+  if (t.includes("how did you hear") || t.includes("hear about us") || t.includes("find this job")) 
+    return "referral-source";
+  if (t.includes("referred by") || t.includes("referral name") || t.includes("employee referral")) 
+    return "referral-name";
+  if (t.includes("know anyone") || t.includes("employee id")) return "employee-connection";
+  
+  // Demographics (EEO)
+  if (t.includes("veteran")) return "veteran-status";
+  if (t.includes("disability")) return "disability-status";
+  if (t.includes("gender") && !t.includes("all")) return "gender";
+  if (t.includes("race") || t.includes("ethnicity")) return "race-ethnicity";
+  if (t.includes("pronoun")) return "pronouns";
+  
+  // Age and eligibility
+  if (t.includes("18") && (t.includes("over") || t.includes("older") || t.includes("years"))) return "age-18";
+  if (t.includes("age")) return "age";
+  
+  // References
+  if (t.includes("reference") && (t.includes("name") || t.includes("contact"))) return "reference";
+  
+  // Previous employment at company
+  if (t.includes("worked") && t.includes("before") || t.includes("former employee") || t.includes("previously employed")) 
+    return "previous-employment-here";
+  
+  // Transportation
+  if (t.includes("reliable transportation")) return "transportation";
+  
+  // Contact preferences
+  if (t.includes("contact method") || t.includes("preferred contact") || t.includes("how") && t.includes("contact")) 
+    return "contact-method";
+  
   return null;
 }
 
@@ -204,26 +416,34 @@ async function lookupClosedAnswer(question, intent = null) {
 }
 
 async function storeClosedAnswer(question, answer, choices = [], intent = null) {
-  if (!answer) return;
+  if (!answer) return { success: false, updated: false, question };
+  
   try {
     const response = await fetch(`${STATE.backendUrl}/closed-question`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, answer, choices, intent })
     });
+    
     if (!response.ok) {
       console.error(`Failed to save answer for "${question}": HTTP ${response.status}`);
-      return;
+      return { success: false, updated: false, question };
     }
+    
     const data = await response.json();
     STATE.qaCache[question] = answer;
-    if (data.updated) {
+    
+    const wasUpdated = data.updated || false;
+    if (wasUpdated) {
       console.log(`✅ Updated answer for "${question}" to "${answer}"`);
     } else {
       console.log(`✅ Saved answer for "${question}": "${answer}"`);
     }
+    
+    return { success: true, updated: wasUpdated, question };
   } catch (err) {
     console.error(`❌ Error saving answer for "${question}":`, err);
+    return { success: false, updated: false, question };
   }
 }
 
@@ -536,9 +756,18 @@ async function saveManualAnswers() {
   const config = await getConfig();
   STATE.backendUrl = config.backendUrl;
   initButtonCapture();
+  
+  // Track results
+  const results = {
+    updated: 0,
+    saved: 0,
+    failed: 0
+  };
+  
   const fields = Array.from(document.querySelectorAll("input, select, textarea")).filter(
     (el) => !el.disabled && el.offsetParent !== null
   );
+  
   for (const field of fields) {
     const question = getQuestionText(field);
     const intent = detectIntent(question);
@@ -554,7 +783,18 @@ async function saveManualAnswers() {
           answer = getLabelText(checked) || checked.value || "";
         }
       }
-      if (answer) await storeClosedAnswer(question, answer, choices, intent);
+      if (answer) {
+        const result = await storeClosedAnswer(question, answer, choices, intent);
+        if (result.success) {
+          if (result.updated) {
+            results.updated++;
+          } else {
+            results.saved++;
+          }
+        } else {
+          results.failed++;
+        }
+      }
       continue;
     }
     // Save consistent text inputs and textareas if they match known intents (e.g., LinkedIn, phone, city)
@@ -563,14 +803,69 @@ async function saveManualAnswers() {
       const q = question.toLowerCase();
       const openEndedHints = ["why", "describe", "tell us", "motivation", "cover letter", "essay"];
       if (openEndedHints.some((hint) => q.includes(hint))) continue;
-      if (value) await storeClosedAnswer(question, value, [], intent);
+      if (value) {
+        const result = await storeClosedAnswer(question, value, [], intent);
+        if (result.success) {
+          if (result.updated) {
+            results.updated++;
+          } else {
+            results.saved++;
+          }
+        } else {
+          results.failed++;
+        }
+      }
     }
   }
+  
   // Also save button-group choices
   const buttonGroups = getButtonGroups();
   for (const group of buttonGroups) {
     const selected = detectSelectedButton(group);
     const answer = (selected && (selected.textContent || "").trim()) || "";
-    if (answer) await storeClosedAnswer(group.question, answer, group.buttons.map((b) => b.textContent?.trim() || ""), detectIntent(group.question));
+    if (answer) {
+      const result = await storeClosedAnswer(
+        group.question, 
+        answer, 
+        group.buttons.map((b) => b.textContent?.trim() || ""), 
+        detectIntent(group.question)
+      );
+      if (result.success) {
+        if (result.updated) {
+          results.updated++;
+        } else {
+          results.saved++;
+        }
+      } else {
+        results.failed++;
+      }
+    }
+  }
+  
+  // Display summary notification
+  const total = results.updated + results.saved;
+  if (total > 0 || results.failed > 0) {
+    let message = "✅ Saved!";
+    const parts = [];
+    
+    if (results.updated > 0) {
+      parts.push(`Updated ${results.updated} answer${results.updated > 1 ? 's' : ''}`);
+    }
+    if (results.saved > 0) {
+      parts.push(`Added ${results.saved} new answer${results.saved > 1 ? 's' : ''}`);
+    }
+    
+    if (parts.length > 0) {
+      message += " " + parts.join(", ");
+    }
+    
+    if (results.failed > 0) {
+      message += ` (${results.failed} failed)`;
+      showNotification(message, "info");
+    } else {
+      showNotification(message, "success");
+    }
+  } else {
+    showNotification("No answers to save", "info");
   }
 }

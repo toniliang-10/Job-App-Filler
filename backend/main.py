@@ -64,6 +64,63 @@ def normalize_question(text: str) -> str:
     return " ".join(cleaned.split())
 
 
+def compute_token_similarity(text1: str, text2: str) -> float:
+    """
+    Compute similarity between two texts based on token overlap.
+    Returns a score between 0 and 1.
+    """
+    tokens1 = set(text1.lower().split())
+    tokens2 = set(text2.lower().split())
+    
+    if not tokens1 or not tokens2:
+        return 0.0
+    
+    # Remove common stop words that don't add meaning
+    stop_words = {"a", "an", "the", "is", "are", "was", "were", "do", "does", "did",
+                  "what", "when", "where", "who", "which", "how", "your", "you", "my",
+                  "have", "has", "had", "be", "been", "being", "of", "for", "to", "in",
+                  "on", "at", "by", "with", "from", "as", "or", "and"}
+    
+    tokens1 = tokens1 - stop_words
+    tokens2 = tokens2 - stop_words
+    
+    if not tokens1 or not tokens2:
+        return 0.0
+    
+    # Calculate Jaccard similarity (intersection / union)
+    intersection = len(tokens1 & tokens2)
+    union = len(tokens1 | tokens2)
+    
+    return intersection / union if union > 0 else 0.0
+
+
+def find_similar_question(normalized_question: str, history: Dict[str, Any], threshold: float = 0.6) -> Optional[str]:
+    """
+    Find a similar question in the history using token-based similarity matching.
+    Returns the normalized key of the most similar question if similarity exceeds threshold.
+    """
+    best_match = None
+    best_score = 0.0
+    
+    for key, entry in history.items():
+        # Compare with the normalized key
+        score = compute_token_similarity(normalized_question, key)
+        
+        # Also compare with the original question text if available
+        if "question" in entry:
+            original_score = compute_token_similarity(
+                normalized_question, 
+                normalize_question(entry["question"])
+            )
+            score = max(score, original_score)
+        
+        if score > best_score and score >= threshold:
+            best_score = score
+            best_match = key
+    
+    return best_match
+
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     pdf = PdfReader(BytesIO(file_bytes))
     pages = []
@@ -252,6 +309,7 @@ def handle_closed_question(payload: ClosedQuestionPayload) -> Dict[str, Any]:
         "answer": None,
     }
 
+    # If we're storing an answer, save it and return
     if payload.answer:
         # Check if we need to update existing entry
         existing_entry = history.get(normalized)
@@ -282,14 +340,42 @@ def handle_closed_question(payload: ClosedQuestionPayload) -> Dict[str, Any]:
         })
         return response
 
+    # Multi-layer matching strategy for lookups
+    
+    # Layer 1: Exact normalized match
     entry = history.get(normalized)
     if entry:
-        response.update({"answer": entry.get("answer"), "found": True})
+        response.update({
+            "answer": entry.get("answer"), 
+            "found": True,
+            "source": "exact"
+        })
         return response
+    
+    # Layer 2: Intent-based lookup
     if payload.intent:
         intent_answer = keyword_answers.get(payload.intent)
         if intent_answer:
-            response.update({"answer": intent_answer, "found": True, "source": "intent"})
+            response.update({
+                "answer": intent_answer, 
+                "found": True, 
+                "source": "intent"
+            })
+            return response
+    
+    # Layer 3: Smart similarity matching
+    similar_key = find_similar_question(normalized, history, threshold=0.6)
+    if similar_key:
+        similar_entry = history.get(similar_key)
+        if similar_entry and similar_entry.get("answer"):
+            response.update({
+                "answer": similar_entry.get("answer"),
+                "found": True,
+                "source": "similarity",
+                "matched_question": similar_entry.get("question", similar_key)
+            })
+            return response
+    
     return response
 
 
